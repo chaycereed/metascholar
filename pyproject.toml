@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metascholar"
+version = "0.1.0"
+description = "A lightweight toolkit for automated literature snapshots using Semantic Scholar."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+
+authors = [
+  { name = "Chayce Reed" }
+]
+
+dependencies = [
+  "requests>=2.31",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "matplotlib>=3.7",
+  "jinja2>=3.1",
+  "markdown>=3.4"
+]
+
+[project.scripts]
+metascholar = "metascholar.cli:main"
