@@ -1,17 +1,10 @@
 import os
 from typing import Optional
-from collections import Counter
-from datetime import date
-import base64
-from io import BytesIO
-
-import matplotlib.pyplot as plt
 import pandas as pd
-
 
 # ---------- Small numeric helpers ----------
 
-def _safe_year_stats(papers: pd.DataFrame) -> tuple[Optional[int], Optional[int]]:
+def _safe_year_stats(papers: pd.DataFrame):
     if "year" not in papers.columns:
         return None, None
     years = pd.to_numeric(papers["year"], errors="coerce").dropna()
@@ -21,7 +14,7 @@ def _safe_year_stats(papers: pd.DataFrame) -> tuple[Optional[int], Optional[int]
     return int(years.min()), int(years.max())
 
 
-def _safe_citation_stats(papers: pd.DataFrame) -> tuple[Optional[float], Optional[float]]:
+def _safe_citation_stats(papers: pd.DataFrame):
     if "citationCount" not in papers.columns:
         return None, None
     cits = pd.to_numeric(papers["citationCount"], errors="coerce").dropna()
@@ -30,64 +23,9 @@ def _safe_citation_stats(papers: pd.DataFrame) -> tuple[Optional[float], Optiona
     return float(cits.median()), float(cits.max())
 
 
-# ---------- Figure → Base64 helper ----------
-
-def _fig_to_base64(fig) -> str:
-    """Convert a Matplotlib figure to a base64-encoded PNG string."""
-    buf = BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    buf.seek(0)
-    encoded = base64.b64encode(buf.read()).decode("utf-8")
-    buf.close()
-    return encoded
-
-
-# ---------- Plot builders (return base64 strings, not files) ----------
-
-def _make_keyword_image_b64(top_keywords: pd.DataFrame) -> Optional[str]:
-    if top_keywords is None or len(top_keywords) == 0:
-        return None
-
-    df = top_keywords.copy()
-    df = df.sort_values("score", ascending=True)
-
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.barh(df["term"], df["score"])
-    ax.set_xlabel("TF-IDF score")
-    ax.set_title("Top keywords")
-    plt.tight_layout()
-
-    img64 = _fig_to_base64(fig)
-    plt.close(fig)
-    return img64
-
-
-def _make_papers_per_year_image_b64(papers: pd.DataFrame) -> Optional[str]:
-    if "year" not in papers.columns:
-        return None
-
-    years = pd.to_numeric(papers["year"], errors="coerce").dropna()
-    if len(years) == 0:
-        return None
-
-    years = years.astype(int)
-    counts = years.value_counts().sort_index()
-
-    fig, ax = plt.subplots(figsize=(8, 4))
-    ax.bar(counts.index, counts.values)
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Number of papers")
-    ax.set_title("Papers per year")
-    plt.tight_layout()
-
-    img64 = _fig_to_base64(fig)
-    plt.close(fig)
-    return img64
-
-
 # ---------- Table helpers ----------
 
-def _get_top_cited(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
+def _get_top_cited(papers: pd.DataFrame, n=10):
     if "citationCount" not in papers.columns:
         return pd.DataFrame()
     df = papers.copy()
@@ -99,7 +37,7 @@ def _get_top_cited(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
     )
 
 
-def _get_most_recent(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
+def _get_most_recent(papers: pd.DataFrame, n=10):
     if "year" not in papers.columns:
         return pd.DataFrame()
     df = papers.copy()
@@ -111,10 +49,7 @@ def _get_most_recent(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
     )
 
 
-def _compute_recommended_reads(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
-    """
-    Combine recency + citations into a single 'meta_score' and pick the top n.
-    """
+def _compute_recommended_reads(papers: pd.DataFrame, n=10):
     if "year" not in papers.columns or "citationCount" not in papers.columns:
         return pd.DataFrame()
 
@@ -126,41 +61,29 @@ def _compute_recommended_reads(papers: pd.DataFrame, n: int = 10) -> pd.DataFram
     if len(valid) == 0:
         return pd.DataFrame()
 
-    year_min = valid["year"].min()
-    year_max = valid["year"].max()
-    year_range = year_max - year_min
+    year_min, year_max = valid["year"].min(), valid["year"].max()
+    year_range = max(1, year_max - year_min)
 
-    if year_range > 0:
-        recency = (valid["year"] - year_min) / year_range
-    else:
-        recency = pd.Series(1.0, index=valid.index)
+    recency = (valid["year"] - year_min) / year_range
 
-    cit_max = valid["citationCount"].max()
-    if cit_max > 0:
-        impact = valid["citationCount"] / cit_max
-    else:
-        impact = pd.Series(0.0, index=valid.index)
+    cit_max = max(1, valid["citationCount"].max())
+    impact = valid["citationCount"] / cit_max
 
-    meta_score = 0.5 * recency + 0.5 * impact
-    valid["meta_score"] = meta_score
+    valid["meta_score"] = 0.5 * recency + 0.5 * impact
 
     return valid.sort_values("meta_score", ascending=False).head(n)
 
 
-def _extract_top_authors(papers: pd.DataFrame, n: int = 15) -> pd.DataFrame:
-    """
-    Count how often each author appears across all papers.
-    Assumes 'authors' column holds list-like of dicts with 'name'.
-    """
+def _extract_top_authors(papers: pd.DataFrame, n=15):
     if "authors" not in papers.columns:
         return pd.DataFrame(columns=["author", "count"])
 
+    from collections import Counter
     counts = Counter()
 
     for entry in papers["authors"].dropna():
         try:
             for a in entry:
-                name = None
                 if isinstance(a, dict):
                     name = a.get("name")
                 else:
@@ -170,208 +93,152 @@ def _extract_top_authors(papers: pd.DataFrame, n: int = 15) -> pd.DataFrame:
         except TypeError:
             continue
 
-    if not counts:
-        return pd.DataFrame(columns=["author", "count"])
-
     items = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:n]
     return pd.DataFrame(items, columns=["author", "count"])
 
 
-def _extract_top_journals(papers: pd.DataFrame, n: int = 10) -> pd.DataFrame:
-    """
-    Count how often each venue/journal appears.
-    Guaranteed to return columns: ['venue', 'count'].
-    """
+def _extract_top_journals(papers: pd.DataFrame, n=10):
     if "venue" not in papers.columns:
         return pd.DataFrame(columns=["venue", "count"])
 
-    venues = (
-        papers["venue"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-    )
+    venues = papers["venue"].fillna("").astype(str).str.strip()
     venues = venues[venues != ""]
     if len(venues) == 0:
         return pd.DataFrame(columns=["venue", "count"])
 
     counts = venues.value_counts().head(n)
-
-    return pd.DataFrame({
-        "venue": counts.index,
-        "count": counts.values,
-    })
+    return pd.DataFrame({"venue": counts.index, "count": counts.values})
 
 
-# ---------- Main report builder (Markdown-only, single file) ----------
+# ---------- Main Report Builder ----------
 
 def build_report(
     papers: pd.DataFrame,
     outdir: str,
     top_keywords: Optional[pd.DataFrame] = None,
     query: Optional[str] = None,
-) -> str:
+):
     """
-    Build a 'literature snapshot' report as a single Markdown file.
-
-    Outputs:
-      - report.md  (only file written to disk)
-        - includes embedded base64 PNGs for plots
-        - includes all tables (recommended reads, authors, journals, etc.)
+    Build a text-only Markdown report (no plots, no ASCII graphics).
     """
     os.makedirs(outdir, exist_ok=True)
 
-    # Ensure expected columns exist so we never KeyError
     papers = papers.copy()
     if "venue" not in papers.columns:
         papers["venue"] = None
     if "authors" not in papers.columns:
         papers["authors"] = None
 
-    # Stats
     min_year, max_year = _safe_year_stats(papers)
     median_cit, max_cit = _safe_citation_stats(papers)
 
-    # Plots as base64
-    keyword_img_b64 = None
-    if top_keywords is not None and len(top_keywords) > 0:
-        keyword_img_b64 = _make_keyword_image_b64(top_keywords)
+    top_cited = _get_top_cited(papers)
+    most_recent = _get_most_recent(papers)
+    recommended = _compute_recommended_reads(papers)
+    top_authors = _extract_top_authors(papers)
+    top_journals = _extract_top_journals(papers)
 
-    papers_per_year_img_b64 = _make_papers_per_year_image_b64(papers)
+    md = []
 
-    # Derived tables
-    top_cited = _get_top_cited(papers, n=10)
-    most_recent = _get_most_recent(papers, n=10)
-    recommended = _compute_recommended_reads(papers, n=10)
-    top_authors = _extract_top_authors(papers, n=15)
-    top_journals = _extract_top_journals(papers, n=10)
-
-    # Build Markdown
-    md_lines: list[str] = []
-
-    title = "metaScholar Literature Snapshot"
-    md_lines.append(f"# {title}\n")
+    md.append("# metaScholar Literature Snapshot\n")
 
     if query:
-        md_lines.append(f"**Query:** `{query}`\n")
+        md.append(f"**Query:** `{query}`\n")
 
     # Overview
-    md_lines.append("## Overview\n")
-    md_lines.append(f"- **Number of papers:** {len(papers)}")
+    md.append("## Overview\n")
+    md.append(f"- **Number of papers:** {len(papers)}")
     if min_year is not None and max_year is not None:
-        md_lines.append(f"- **Year range:** {min_year}–{max_year}")
+        md.append(f"- **Year range:** {min_year}–{max_year}")
     if median_cit is not None and max_cit is not None:
-        md_lines.append(f"- **Citations (median / max):** {median_cit:.1f} / {max_cit:.1f}")
-    md_lines.append("")  # blank line
+        md.append(f"- **Citations (median / max):** {median_cit:.1f} / {max_cit:.1f}")
+    md.append("")
 
-    # Top Keywords
-    md_lines.append("## Top Keywords\n")
+    # Top Keywords (table only)
+    md.append("## Top Keywords\n")
     if top_keywords is not None and len(top_keywords) > 0:
-        md_lines.append("The most prominent terms across titles and abstracts (by TF-IDF score):\n")
-        md_lines.append("| Rank | Term | Score |")
-        md_lines.append("|------|------|-------|")
+        md.append("| Rank | Term | Score |")
+        md.append("|------|------|-------|")
         for i, row in top_keywords.iterrows():
-            md_lines.append(f"| {i+1} | {row['term']} | {row['score']:.4f} |")
-        md_lines.append("")
-        if keyword_img_b64 is not None:
-            md_lines.append(
-                f'<img src="data:image/png;base64,{keyword_img_b64}" alt="Top keywords" />\n'
-            )
+            md.append(f"| {i+1} | {row['term']} | {row['score']:.4f} |")
+        md.append("")
     else:
-        md_lines.append("_No keyword statistics available._\n")
+        md.append("_No keyword statistics available._\n")
 
-    # Time Trend
-    md_lines.append("## Time Trend\n")
-    if papers_per_year_img_b64 is not None:
-        md_lines.append("Distribution of papers over publication years in this query:\n")
-        md_lines.append(
-            f'<img src="data:image/png;base64,{papers_per_year_img_b64}" alt="Papers per year" />\n'
-        )
-    else:
-        md_lines.append("_No year information available to plot._\n")
-
-    # Recommended First Reads
-    md_lines.append("## Recommended First Reads\n")
-    if len(recommended) > 0:
-        md_lines.append("Papers ranked by a combined score of recency and citation impact:\n")
-        for _, row in recommended.iterrows():
-            title_ = str(row.get("title", "")).strip()
-            year_ = row.get("year", "NA")
-            cits_ = row.get("citationCount", "NA")
-            score_ = row.get("meta_score", "NA")
-            url_ = row.get("url", "")
-            md_lines.append(
-                f"- **{title_}** ({year_}) — citations: {cits_}, score: {score_:.3f}"
-            )
-            if isinstance(url_, str) and url_.strip():
-                md_lines.append(f"  - {url_}")
-        md_lines.append("")
-    else:
-        md_lines.append("_Not enough data to compute recommended reads._\n")
-
-    # Top Authors
-    md_lines.append("## Top Authors\n")
-    if len(top_authors) > 0:
-        md_lines.append("Authors appearing most frequently across this query:\n")
-        md_lines.append("| Rank | Author | # Papers |")
-        md_lines.append("|------|--------|----------|")
+    # Authors
+    md.append("## Top Authors\n")
+    if len(top_authors):
+        md.append("| Rank | Author | # Papers |")
+        md.append("|------|--------|----------|")
         for i, row in top_authors.iterrows():
-            md_lines.append(f"| {i+1} | {row['author']} | {row['count']} |")
-        md_lines.append("")
+            md.append(f"| {i+1} | {row['author']} | {row['count']} |")
+        md.append("")
     else:
-        md_lines.append("_Author information not available or not parseable._\n")
+        md.append("_Author information not available._\n")
 
-    # Top Journals / Venues
-    md_lines.append("## Top Journals / Venues\n")
-    if len(top_journals) > 0:
-        md_lines.append("Most common journals or venues in this query:\n")
-        md_lines.append("| Rank | Journal / Venue | # Papers |")
-        md_lines.append("|------|------------------|----------|")
+    # Journals
+    md.append("## Top Journals / Venues\n")
+    if len(top_journals):
+        md.append("| Rank | Journal / Venue | # Papers |")
+        md.append("|------|------------------|----------|")
         for i, row in top_journals.iterrows():
-            venue = row.get("venue", "Unknown")
-            count = row.get("count", 0)
-            md_lines.append(f"| {i+1} | {venue} | {count} |")
-        md_lines.append("")
+            md.append(f"| {i+1} | {row['venue']} | {row['count']} |")
+        md.append("")
     else:
-        md_lines.append("_Journal / venue information not available._\n")
+        md.append("_Journal / venue information not available._\n")
+    
+    # Recommended reads
+    md.append("## Recommended First Reads\n")
+    if len(recommended):
+        for _, row in recommended.iterrows():
+            title = row.get("title", "")
+            year = row.get("year", "NA")
+            cits = row.get("citationCount", "NA")
+            score = row.get("meta_score", 0)
+            url = row.get("url", "")
+            md.append(f"- **{title}** ({year}) — citations: {cits}, score: {score:.3f}")
+            if isinstance(url, str) and url.strip():
+                md.append(f"  - {url}")
+        md.append("")
+    else:
+        md.append("_Not enough data to compute recommended reads._\n")
 
     # Most Cited
-    md_lines.append("## Most Cited Papers\n")
-    if len(top_cited) > 0:
+    md.append("## Most Cited Papers\n")
+    if len(top_cited):
         for _, row in top_cited.iterrows():
-            title_ = str(row.get("title", "")).strip()
-            year_ = row.get("year", "NA")
-            cits_ = row.get("citationCount", "NA")
-            url_ = row.get("url", "")
-            md_lines.append(f"- **{title_}** ({year_}) — citations: {cits_}")
-            if isinstance(url_, str) and url_.strip():
-                md_lines.append(f"  - {url_}")
-        md_lines.append("")
+            title = row.get("title", "")
+            year = row.get("year", "NA")
+            cits = row.get("citationCount", "NA")
+            url = row.get("url", "")
+            md.append(f"- **{title}** ({year}) — citations: {cits}")
+            if isinstance(url, str) and url.strip():
+                md.append(f"  - {url}")
+        md.append("")
     else:
-        md_lines.append("_Citation data not available._\n")
+        md.append("_Citation data not available._\n")
 
     # Most Recent
-    md_lines.append("## Most Recent Papers\n")
-    if len(most_recent) > 0:
+    md.append("## Most Recent Papers\n")
+    if len(most_recent):
         for _, row in most_recent.iterrows():
-            title_ = str(row.get("title", "")).strip()
-            year_ = row.get("year", "NA")
-            cits_ = row.get("citationCount", "NA")
-            url_ = row.get("url", "")
-            md_lines.append(f"- **{title_}** ({year_}) — citations: {cits_}")
-            if isinstance(url_, str) and url_.strip():
-                md_lines.append(f"  - {url_}")
-        md_lines.append("")
+            title = row.get("title", "")
+            year = row.get("year", "NA")
+            cits = row.get("citationCount", "NA")
+            url = row.get("url", "")
+            md.append(f"- **{title}** ({year}) — citations: {cits}")
+            if isinstance(url, str) and url.strip():
+                md.append(f"  - {url}")
+        md.append("")
     else:
-        md_lines.append("_Year information not available._\n")
+        md.append("_Year information not available._\n")
 
-    md_lines.append("---")
-    md_lines.append("_Generated by metaScholar._\n")
+    md.append("---")
+    md.append("_Generated by metaScholar._\n")
 
-    # Write Markdown file (only output)
-    md_path = os.path.join(outdir, "report.md")
-    md_text = "\n".join(md_lines)
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(md_text)
+    # Write file
+    path = os.path.join(outdir, "report.md")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(md))
 
-    return md_path
+    return path

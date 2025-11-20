@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "metascholar"
-version = "0.1.0"
+version = "0.0.1"
 description = "A lightweight toolkit for automated literature snapshots using Semantic Scholar."
 readme = "README.md"
 requires-python = ">=3.9"
