@@ -4,9 +4,9 @@ Welcome to **metascholar** — a small Python toolkit that generates a **literat
 
 `metascholar` helps researchers, students, and PIs quickly understand a topic by automatically fetching papers, extracting key patterns, and producing a clean Markdown report with embedded visuals.
 
-<br />
+---
 
-## 🧠 What it does
+## What it does
 
 - Fetches **titles, abstracts, years, authors, citations, and venues** using the Semantic Scholar API  
 - Builds a **clean text corpus** for lightweight keyword extraction  
@@ -22,9 +22,9 @@ Welcome to **metascholar** — a small Python toolkit that generates a **literat
   - No PNGs  
   - Fully portable  
 
-<br />
+---
 
-## 📦 Installation
+## Installation
 
 Install directly from your GitHub repository:
 
@@ -38,9 +38,9 @@ After installation:
 metascholar --help
 ```
 
-<br />
+---
 
-## 💻 Usage
+## Usage
 
 ### **1. Run interactively (recommended)**
 
@@ -75,7 +75,7 @@ The report includes:
 
 All in **one** human-readable Markdown file.
 
-<br />
+---
 
 ### **2. Non-interactive mode**
 
@@ -87,7 +87,7 @@ metascholar --query "exercise depression" --n-papers 150 --outdir reports/exerci
 
 This is ideal for scripts, cron jobs, or automated workflows.
 
-<br />
+---
 
 ### **3. Run via Python module**
 
@@ -95,9 +95,9 @@ This is ideal for scripts, cron jobs, or automated workflows.
 python3 -m metascholar.cli "exercise depression"
 ```
 
-<br />
+---
 
-## 📄 Example Output
+## Example Output
 
 A typical `report.md` includes:
 
@@ -115,9 +115,9 @@ Works in:
 - Obsidian  
 - Markdown previews  
 
-<br />
+---
 
-## 🧩 Philosophy
+## Philosophy
 
 `metascholar` is intentionally minimal:
 
@@ -129,8 +129,8 @@ MetaScholar hands you the literature snapshot.
 
 It’s a tiny tool built for busy researchers.
 
-<br />
+---
 
-## 📜 License
+## License
 
 MIT License. See `LICENSE` for details.
