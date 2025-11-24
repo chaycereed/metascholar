@@ -1,3 +1,15 @@
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message="urllib3 v2 only supports OpenSSL",
+    category=Warning,
+)
+warnings.filterwarnings(
+    "ignore",
+    module="urllib3",
+)
+
 import argparse
 import os
 import sys

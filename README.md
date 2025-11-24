@@ -2,7 +2,16 @@
 
 Welcome to **metascholar** — a small Python toolkit that generates a **literature snapshot report** from a single command.
 
-`metascholar` helps researchers, students, and PIs quickly understand a topic by automatically fetching papers, extracting key patterns, and producing a clean Markdown report with embedded visuals.
+`metascholar` helps researchers, students, and PIs quickly understand a topic by automatically fetching papers, extracting key patterns, and producing a clean Markdown report.
+
+--
+
+<video src="https://github.com/user-attachments/assets/248bd614-fab3-4f4d-b9db-7d6b48e3343e"
+       width="750"
+       autoplay
+       loop
+       muted>
+</video>
 
 ---
 
@@ -114,20 +123,6 @@ Works in:
 - Notion  
 - Obsidian  
 - Markdown previews  
-
----
-
-## Philosophy
-
-`metascholar` is intentionally minimal:
-
-The goal is simple:  
-**provide a fast, meaningful overview of a research topic — no clutter, no setup, no extra files.**
-
-You type a question.  
-MetaScholar hands you the literature snapshot.
-
-It’s a tiny tool built for busy researchers.
 
 ---
 
