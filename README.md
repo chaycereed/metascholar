@@ -51,8 +51,6 @@ metascholar --help
 
 ## Usage
 
-### **1. Run interactively (recommended)**
-
 Simply type:
 
 ```bash
@@ -83,26 +81,6 @@ The report includes:
 - Most cited / most recent papers  
 
 All in **one** human-readable Markdown file.
-
----
-
-### **2. Non-interactive mode**
-
-You can also run directly from the command line:
-
-```bash
-metascholar --query "exercise depression" --n-papers 150 --outdir reports/exercise_depression
-```
-
-This is ideal for scripts, cron jobs, or automated workflows.
-
----
-
-### **3. Run via Python module**
-
-```bash
-python3 -m metascholar.cli "exercise depression"
-```
 
 ---
 
