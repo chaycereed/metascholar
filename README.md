@@ -58,11 +58,21 @@ metascholar
 ```
 
 You’ll be guided through a small wizard:
+```
+🔬 Welcome to metascholar – literature search and retrieval tool
 
-- Query (e.g., “exercise depression”)  
-- Number of papers to fetch  
-- Output folder name  
-- Confirmation before running  
+[metaScholar] Search query (required, e.g. 'exercise depression'): 
+[metaScholar] Number of papers to fetch (default 100) [100]: 
+[metaScholar] Output folder name [metascholar_output]: 
+
+[metaScholar] Summary:
+[metaScholar]   • Query        : 
+[metaScholar]   • # of papers  : 
+[metaScholar]   • Output folder: 
+
+[metaScholar] Proceed? [y/n]: 
+```
+
 
 This produces:
 
@@ -71,7 +81,7 @@ your_topic/
   report.md
 ```
 
-The report includes:
+The `report.md` includes:
 
 - Top keywords (with embedded plot)  
 - Publication year trend (embedded plot)  
@@ -84,22 +94,10 @@ All in **one** human-readable Markdown file.
 
 ---
 
-## Output
-
-A typical `report.md` includes:
-
-- Clean sections  
-- Tables for top keywords, authors, venues  
-- Embedded figures (keyword plot, time trend)  
-- A focused list of “first reads” with links  
-- A compact snapshot view of the field
-
----
-
 ## Example
 
 <details>
-<summary>Example Report</summary>
+<summary>report.md</summary>
 
 # metaScholar Literature Snapshot
 
