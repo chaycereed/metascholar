@@ -22,7 +22,7 @@ def compute_top_keywords(
     if not corpus:
         return pd.DataFrame(columns=["term", "score"])
 
-    vectorizer = TfidfVectorizer(max_features=max_features)
+    vectorizer = TfidfVectorizer(max_features=max_features, stop_words="english")
     X = vectorizer.fit_transform(corpus)
 
     # Sum TF-IDF scores across all documents

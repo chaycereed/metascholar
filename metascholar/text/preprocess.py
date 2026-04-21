@@ -90,5 +90,4 @@ def build_corpus_from_df(
         clean_texts.append(clean_doc)
         corpus.append(clean_doc)
 
-    papers["clean_text"] = clean_texts
     return corpus

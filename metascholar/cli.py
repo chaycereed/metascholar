@@ -53,6 +53,8 @@ def run_pipeline(query: str, n_papers: int, outdir: str) -> None:
         return
 
     print(f"{BOLD}{MAGENTA}[metaScholar]{RESET} Fetched {len(papers_df)} papers.")
+    if len(papers_df) < n_papers:
+        print(f"{BOLD}{YELLOW}[metaScholar]{RESET} Warning: requested {n_papers} papers but only {len(papers_df)} were returned (API limit).")
 
     # 1) Build cleaned corpus
     print(f"{BOLD}{MAGENTA}[metaScholar]{RESET} Building cleaned text corpus from titles and abstracts...")

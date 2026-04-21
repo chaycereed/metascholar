@@ -39,10 +39,12 @@ def fetch_papers_for_query(query: str, n_papers: int = 100) -> pd.DataFrame:
                 )
 
             if resp.status_code >= 500:
-                raise SemanticScholarError(
-                    "Semantic Scholar's servers are currently unavailable (5xx error).\n"
-                    "They may be busy or temporarily offline. Please try again later."
-                )
+                if attempt == MAX_RETRIES:
+                    raise SemanticScholarError(
+                        "Semantic Scholar's servers are currently unavailable (5xx error).\n"
+                        "They may be busy or temporarily offline. Please try again later."
+                    )
+                continue
 
             if resp.status_code != 200:
                 raise SemanticScholarError(
