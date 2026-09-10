@@ -51,20 +51,16 @@ sleep_review/
   figures/
     year_trend.png
     citation_distribution.png
-    top_keywords.png
 ```
 
 The report includes:
 
 - Overview (paper count, year range, citation statistics)
-- Publications-per-year bar chart
-- Citation distribution histogram
-- Top keywords table and bar chart
-- Top authors table
-- Top journals and venues table
+- Publications-per-year bar chart and citation distribution histogram, side by side
 - Recommended first reads with abstracts
 - Most cited papers
 - Most recent papers
+- Top journals and venues table
 
 ## Example
 

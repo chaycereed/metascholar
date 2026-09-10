@@ -2,7 +2,7 @@ import os
 from typing import Optional
 import pandas as pd
 
-from .plots import plot_year_trend, plot_top_keywords, plot_citation_distribution
+from .plots import plot_year_trend, plot_citation_distribution
 
 
 # ---------- Small numeric helpers ----------
@@ -15,6 +15,14 @@ def _safe_year_stats(papers: pd.DataFrame):
         return None, None
     years = years.astype(int)
     return int(years.min()), int(years.max())
+
+
+def _fmt_year(value) -> str:
+    """Render a year without the float artifact left by pd.to_numeric."""
+    year = pd.to_numeric(value, errors="coerce")
+    if pd.isna(year):
+        return "NA"
+    return str(int(year))
 
 
 def _safe_citation_stats(papers: pd.DataFrame):
@@ -76,29 +84,6 @@ def _compute_recommended_reads(papers: pd.DataFrame, n=10):
     ).head(n)
 
 
-def _extract_top_authors(papers: pd.DataFrame, n=15):
-    if "authors" not in papers.columns:
-        return pd.DataFrame(columns=["author", "count"])
-
-    from collections import Counter
-    counts = Counter()
-
-    for entry in papers["authors"].dropna():
-        try:
-            for a in entry:
-                if isinstance(a, dict):
-                    name = a.get("name")
-                else:
-                    name = str(a)
-                if name:
-                    counts[name] += 1
-        except TypeError:
-            continue
-
-    items = sorted(counts.items(), key=lambda x: x[1], reverse=True)[:n]
-    return pd.DataFrame(items, columns=["author", "count"])
-
-
 def _extract_top_journals(papers: pd.DataFrame, n=10):
     if "venue" not in papers.columns:
         return pd.DataFrame(columns=["venue", "count"])
@@ -117,7 +102,7 @@ def _extract_top_journals(papers: pd.DataFrame, n=10):
 def build_report(
     papers: pd.DataFrame,
     outdir: str,
-    top_keywords: Optional[pd.DataFrame] = None,
+    top_keywords: Optional[pd.DataFrame] = None,  # accepted but no longer rendered
     query: Optional[str] = None,
 ):
     os.makedirs(outdir, exist_ok=True)
@@ -126,8 +111,6 @@ def build_report(
     papers = papers.copy()
     if "venue" not in papers.columns:
         papers["venue"] = None
-    if "authors" not in papers.columns:
-        papers["authors"] = None
 
     min_year, max_year = _safe_year_stats(papers)
     median_cit, max_cit = _safe_citation_stats(papers)
@@ -135,11 +118,9 @@ def build_report(
     top_cited = _get_top_cited(papers)
     most_recent = _get_most_recent(papers)
     recommended = _compute_recommended_reads(papers)
-    top_authors = _extract_top_authors(papers)
     top_journals = _extract_top_journals(papers)
 
     year_plot = plot_year_trend(papers, outdir)
-    keyword_plot = plot_top_keywords(top_keywords, outdir)
     citation_plot = plot_citation_distribution(papers, outdir)
 
     md = []
@@ -158,55 +139,26 @@ def build_report(
         md.append(f"- **Citations (median / max):** {median_cit:.1f} / {max_cit:.1f}")
     md.append("")
 
+    # Plots, side by side
     plots = [
         (year_plot, "Publications per Year"),
         (citation_plot, "Citation Distribution"),
-        (keyword_plot, "Top Keywords"),
     ]
-    for path, alt in plots:
-        if path:
-            md.append(f"![{alt}]({path})")
-            md.append("")
-
-    # Top Keywords
-    md.append("## Top Keywords\n")
-    if top_keywords is not None and len(top_keywords) > 0:
-        md.append("| Rank | Term | Score |")
-        md.append("|------|------|-------|")
-        for i, row in top_keywords.iterrows():
-            md.append(f"| {i+1} | {row['term']} | {row['score']:.4f} |")
+    available = [(path, alt) for path, alt in plots if path]
+    if available:
+        width = f"{100 // len(available) - 1}%"
+        md.append("<p align=\"center\">")
+        for path, alt in available:
+            md.append(f'  <img src="{path}" alt="{alt}" width="{width}">')
+        md.append("</p>")
         md.append("")
-    else:
-        md.append("_No keyword statistics available._\n")
-
-    # Authors
-    md.append("## Top Authors\n")
-    if len(top_authors):
-        md.append("| Rank | Author | # Papers |")
-        md.append("|------|--------|----------|")
-        for i, row in top_authors.iterrows():
-            md.append(f"| {i+1} | {row['author']} | {row['count']} |")
-        md.append("")
-    else:
-        md.append("_Author information not available._\n")
-
-    # Journals
-    md.append("## Top Journals / Venues\n")
-    if len(top_journals):
-        md.append("| Rank | Journal / Venue | # Papers |")
-        md.append("|------|------------------|----------|")
-        for i, row in top_journals.iterrows():
-            md.append(f"| {i+1} | {row['venue']} | {row['count']} |")
-        md.append("")
-    else:
-        md.append("_Journal / venue information not available._\n")
 
     # Recommended reads
     md.append("## Recommended First Reads\n")
     if len(recommended):
         for _, row in recommended.iterrows():
             title = row.get("title", "")
-            year = row.get("year", "NA")
+            year = _fmt_year(row.get("year"))
             cits = row.get("citationCount", "NA")
             score = row.get("meta_score", 0)
             url = row.get("url", "")
@@ -232,7 +184,7 @@ def build_report(
     if len(top_cited):
         for _, row in top_cited.iterrows():
             title = row.get("title", "")
-            year = row.get("year", "NA")
+            year = _fmt_year(row.get("year"))
             cits = row.get("citationCount", "NA")
             url = row.get("url", "")
             md.append(f"- **{title}** ({year}) — citations: {cits}")
@@ -247,7 +199,7 @@ def build_report(
     if len(most_recent):
         for _, row in most_recent.iterrows():
             title = row.get("title", "")
-            year = row.get("year", "NA")
+            year = _fmt_year(row.get("year"))
             cits = row.get("citationCount", "NA")
             url = row.get("url", "")
             md.append(f"- **{title}** ({year}) — citations: {cits}")
@@ -257,8 +209,17 @@ def build_report(
     else:
         md.append("_Year information not available._\n")
 
-    md.append("---")
-    md.append("_Generated by metaScholar._\n")
+    # Journals
+    md.append("## Top Journals / Venues\n")
+    if len(top_journals):
+        md.append("| Rank | Journal / Venue | # Papers |")
+        md.append("|------|------------------|----------|")
+        for i, row in top_journals.iterrows():
+            md.append(f"| {i+1} | {row['venue']} | {row['count']} |")
+        md.append("")
+    else:
+        md.append("_Journal / venue information not available._\n")
+
 
     path = os.path.join(outdir, "report.md")
     with open(path, "w", encoding="utf-8") as f:
